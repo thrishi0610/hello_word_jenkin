@@ -1,18 +1,14 @@
-# Use OpenJDK as base image
 FROM openjdk:8
 
-# Install Python3 (for simple HTTP server)
-RUN apt-get update && apt-get install -y python3
+WORKDIR /app
 
-# Copy Java source file
 COPY HelloWorld.java .
 
-# Compile Java file
-RUN javac HelloWorld.java
+RUN javac HelloWorld.java \
+ && java HelloWorld
 
-# Create index.html with Hello World content
-RUN echo "<html><body><h1>Hello World</h1></body></html>" > index.html
+RUN apt-get update && apt-get install -y python3
 
-# Run Python server on port 8000
-CMD ["sh", "-c", "java HelloWorld && python3 -m http.server 8000"]
+EXPOSE 8000
 
+CMD ["python3", "-m", "http.server", "8000"]
