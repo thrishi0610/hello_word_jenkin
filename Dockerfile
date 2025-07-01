@@ -14,4 +14,5 @@ RUN javac HelloWorld.java
 RUN echo "<html><body><h1>Hello World</h1></body></html>" > index.html
 
 # Run Python server on port 8000
-CMD ["python3", "-m", "http.server", "8000"]
+CMD ["sh", "-c", "java HelloWorld && python3 -m http.server 8000"]
+
