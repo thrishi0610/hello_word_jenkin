@@ -2,13 +2,14 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "thrishika/hello-world-docker"
+        DOCKER_CREDENTIALS = credentials('docker-hub-creds') // Your DockerHub creds ID
+        IMAGE_NAME = 'thrishika/hello-world-docker'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main', url: 'https://github.com/thrishi0610/hello_word_jenkin.git'
             }
         }
 
@@ -19,42 +20,34 @@ pipeline {
                     def currentVersion = readFile(versionFile).trim()
                     echo "🔢 Current version: ${currentVersion}"
 
-                    def versionNumber = currentVersion.replace("v", "").toInteger()
+                    def versionNumber = currentVersion.replaceAll("[^0-9]", "").toInteger()
                     def newVersion = "v${versionNumber + 1}"
                     echo "🚀 New version: ${newVersion}"
 
-                    writeFile file: versionFile, text: "${newVersion}"
+                    writeFile file: versionFile, text: newVersion
 
-                    bat 'git config user.email "you@example.com"'
-                    bat 'git config user.name "jenkins"'
-                    bat 'git add version.txt'
-                    bat 'git commit -m "🔁 Auto bump to ${newVersion}"'
-                    bat 'git checkout main'
-                    bat 'git push origin main'
+                    bat "git config user.email \"you@example.com\""
+                    bat "git config user.name \"jenkins\""
+                    bat "git add ${versionFile}"
+                    bat "git commit -m \"🔁 Auto bump to ${newVersion}\""
+                    bat "git push origin HEAD:main"
 
-                    env.NEW_VERSION = newVersion
+                    env.IMAGE_TAG = newVersion
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t ${IMAGE_NAME}:latest ."
-            }
-        }
-
-        stage('Tag Docker Image with Version') {
-            steps {
-                bat "docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${env.NEW_VERSION}"
+                bat "docker build -t ${IMAGE_NAME}:${env.IMAGE_TAG} ."
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB_CREDENTIALS', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    bat 'echo %PASSWORD% | docker login -u %USERNAME% --password-stdin'
-                    bat "docker push ${IMAGE_NAME}:${env.NEW_VERSION}"
-                    bat "docker push ${IMAGE_NAME}:latest"
+                script {
+                    bat "docker login -u ${DOCKER_CREDENTIALS_USR} -p ${DOCKER_CREDENTIALS_PSW}"
+                    bat "docker push ${IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
             }
         }
