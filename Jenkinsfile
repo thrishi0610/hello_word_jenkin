@@ -3,13 +3,16 @@ pipeline {
 
     environment {
         IMAGE_NAME = "thrishika/hello-world-docker"
-        VERSION = "v${BUILD_NUMBER}"
     }
 
     stages {
         stage('Clone GitHub Repo') {
             steps {
                 git branch: 'main', url: 'https://github.com/thrishi0610/hello_word_jenkin.git'
+                script {
+                    GIT_COMMIT = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.VERSION = "v${GIT_COMMIT}"
+                }
             }
         }
 
