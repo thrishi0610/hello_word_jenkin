@@ -11,6 +11,7 @@ pipeline {
             steps {
                 git branch: 'main', url: 'https://github.com/thrishi0610/hello_word_jenkin.git'
                 script {
+                    // Get short commit hash and store it in a Groovy variable
                     def commitHash = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.VERSION_TAG = "v${commitHash}"
                     echo "✔ Version tag set to ${env.VERSION_TAG}"
@@ -26,7 +27,10 @@ pipeline {
 
         stage('Tag Image with Version') {
             steps {
-                bat "docker tag ${IMAGE_NAME} thrishika/${IMAGE_NAME}:${VERSION_TAG}"
+                script {
+                    def versionTag = env.VERSION_TAG
+                    bat "docker tag ${IMAGE_NAME} thrishika/${IMAGE_NAME}:${versionTag}"
+                }
             }
         }
 
@@ -34,7 +38,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     bat "docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%"
-                    bat "docker push thrishika/${IMAGE_NAME}:${VERSION_TAG}"
+                    bat "docker push thrishika/${IMAGE_NAME}:${env.VERSION_TAG}"
                 }
             }
         }
@@ -48,7 +52,7 @@ pipeline {
 
         stage('Run Specific Version of Image') {
             steps {
-                bat "docker run -d --name running-container -p 8000:8000 thrishika/${IMAGE_NAME}:${VERSION_TAG}"
+                bat "docker run -d --name running-container -p 8000:8000 thrishika/${IMAGE_NAME}:${env.VERSION_TAG}"
             }
         }
     }
