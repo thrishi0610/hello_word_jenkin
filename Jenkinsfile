@@ -1,9 +1,10 @@
 pipeline {
     agent any
+
     environment {
         IMAGE_NAME = "thrishika/hello-world-docker"
-        DOCKER_CREDENTIALS_ID = "docker-hub-creds"
     }
+
     stages {
         stage('Checkout') {
             steps {
@@ -14,23 +15,24 @@ pipeline {
         stage('Read & Increment Version') {
             steps {
                 script {
-                    def versionFile = readFile('version.txt').trim()
-                    echo "🔢 Current version: ${versionFile}"
+                    def versionFile = 'version.txt'
+                    def currentVersion = readFile(versionFile).trim()
+                    echo "🔢 Current version: ${currentVersion}"
 
-                    def versionNum = versionFile.replaceAll("[^0-9]", "").toInteger()
-                    def newVersionNum = versionNum + 1
-                    newVersion = "v${newVersionNum}"
+                    def versionNumber = currentVersion.replace("v", "").toInteger()
+                    def newVersion = "v${versionNumber + 1}"
                     echo "🚀 New version: ${newVersion}"
 
-                    // Save back to version.txt
-                    writeFile file: 'version.txt', text: newVersion
+                    writeFile file: versionFile, text: "${newVersion}"
 
-                    // Commit updated version.txt to GitHub
-                    bat "git config user.email \"you@example.com\""
-                    bat "git config user.name \"jenkins\""
-                    bat "git add version.txt"
-                    bat "git commit -m \"🔁 Auto bump to ${newVersion}\""
-                    bat "git push origin main"
+                    bat 'git config user.email "you@example.com"'
+                    bat 'git config user.name "jenkins"'
+                    bat 'git add version.txt'
+                    bat 'git commit -m "🔁 Auto bump to ${newVersion}"'
+                    bat 'git checkout main'
+                    bat 'git push origin main'
+
+                    env.NEW_VERSION = newVersion
                 }
             }
         }
@@ -43,15 +45,16 @@ pipeline {
 
         stage('Tag Docker Image with Version') {
             steps {
-                bat "docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${newVersion}"
+                bat "docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${env.NEW_VERSION}"
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
-                    bat "docker push ${IMAGE_NAME}:${newVersion}"
+                withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB_CREDENTIALS', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    bat 'echo %PASSWORD% | docker login -u %USERNAME% --password-stdin'
+                    bat "docker push ${IMAGE_NAME}:${env.NEW_VERSION}"
+                    bat "docker push ${IMAGE_NAME}:latest"
                 }
             }
         }
