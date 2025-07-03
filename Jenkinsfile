@@ -11,8 +11,9 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/thrishi0610/hello_word_jenkin.git'
                 script {
                     def commitHash = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    commitHash = commitHash.replaceAll("[^a-zA-Z0-9]", "") // clean just in case
                     env.VERSION = "v${commitHash}"
-                    echo "Commit version set to: ${env.VERSION}"
+                    echo "✔ Version tag set to ${env.VERSION}"
                 }
             }
         }
@@ -25,8 +26,7 @@ pipeline {
 
         stage('Tag Image with Version') {
             steps {
-                bat "docker tag hello-world-docker ${IMAGE_NAME}:${VERSION}"
-                echo "Tagged image with version: ${VERSION}"
+                bat "docker tag hello-world-docker ${IMAGE_NAME}:${env.VERSION}"
             }
         }
 
@@ -34,7 +34,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     bat "docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%"
-                    bat "docker push ${IMAGE_NAME}:${VERSION}"
+                    bat "docker push ${IMAGE_NAME}:${env.VERSION}"
                 }
             }
         }
@@ -50,7 +50,7 @@ pipeline {
 
         stage('Run Specific Version of Image') {
             steps {
-                bat "docker run -d -p 8000:8000 --name running-container ${IMAGE_NAME}:${VERSION}"
+                bat "docker run -d -p 8000:8000 --name running-container ${IMAGE_NAME}:${env.VERSION}"
             }
         }
     }
