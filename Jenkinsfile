@@ -26,8 +26,7 @@ pipeline {
                     def versionTag = "v${commitHash}"
                     echo "✔ Tagging image as thrishika/${IMAGE_NAME}:${versionTag}"
                     bat "docker tag ${IMAGE_NAME} thrishika/${IMAGE_NAME}:${versionTag}"
-                    // Save for next stages
-                    env.VERSION_TAG = versionTag
+                    env.VERSION_TAG = versionTag  // Store for next stage
                 }
             }
         }
