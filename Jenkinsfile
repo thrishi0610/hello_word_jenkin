@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        VERSION = "v1"  // Starting with version v1
+        IMAGE_NAME = "thrishika/hello-world-docker"
+        VERSION = "v${BUILD_NUMBER}"
     }
 
     stages {
@@ -20,7 +21,7 @@ pipeline {
 
         stage('Tag Image with Version') {
             steps {
-                bat "docker tag hello-world-docker thrishika/hello-world-docker:${VERSION}"
+                bat "docker tag hello-world-docker ${IMAGE_NAME}:${VERSION}"
                 echo "Tagged image with version: ${VERSION}"
             }
         }
@@ -29,20 +30,23 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     bat "docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%"
-                    bat "docker push thrishika/hello-world-docker:${VERSION}"
+                    bat "docker push ${IMAGE_NAME}:${VERSION}"
                 }
             }
         }
 
         stage('Remove Old Container') {
             steps {
-                bat 'docker rm -f hello-container || echo "No old container to remove"'
+                bat """
+                    docker stop running-container || echo No container to stop
+                    docker rm running-container || echo No container to remove
+                """
             }
         }
 
         stage('Run Specific Version of Image') {
             steps {
-                bat "docker run -d --name hello-container thrishika/hello-world-docker:${VERSION}"
+                bat "docker run -d -p 8000:8000 --name running-container ${IMAGE_NAME}:${VERSION}"
             }
         }
     }
