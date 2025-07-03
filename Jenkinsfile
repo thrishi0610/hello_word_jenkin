@@ -2,20 +2,14 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-creds')
         IMAGE_NAME = "hello-world-docker"
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-creds')
     }
 
     stages {
         stage('Clone GitHub Repo') {
             steps {
                 git branch: 'main', url: 'https://github.com/thrishi0610/hello_word_jenkin.git'
-                script {
-                    // Get short commit hash and store it in a Groovy variable
-                    def commitHash = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    env.VERSION_TAG = "v${commitHash}"
-                    echo "✔ Version tag set to ${env.VERSION_TAG}"
-                }
             }
         }
 
@@ -28,8 +22,12 @@ pipeline {
         stage('Tag Image with Version') {
             steps {
                 script {
-                    def versionTag = env.VERSION_TAG
+                    def commitHash = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    def versionTag = "v${commitHash}"
+                    echo "✔ Tagging image as thrishika/${IMAGE_NAME}:${versionTag}"
                     bat "docker tag ${IMAGE_NAME} thrishika/${IMAGE_NAME}:${versionTag}"
+                    // Save for next stages
+                    env.VERSION_TAG = versionTag
                 }
             }
         }
