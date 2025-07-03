@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "thrishika/hello-world-docker"
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-creds')
+        IMAGE_NAME = "hello-world-docker"
     }
 
     stages {
@@ -11,22 +12,21 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/thrishi0610/hello_word_jenkin.git'
                 script {
                     def commitHash = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    commitHash = commitHash.replaceAll("[^a-zA-Z0-9]", "") // clean just in case
-                    env.VERSION = "v${commitHash}"
-                    echo "✔ Version tag set to ${env.VERSION}"
+                    env.VERSION_TAG = "v${commitHash}"
+                    echo "✔ Version tag set to ${env.VERSION_TAG}"
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t hello-world-docker ."
+                bat "docker build -t ${IMAGE_NAME} ."
             }
         }
 
         stage('Tag Image with Version') {
             steps {
-                bat "docker tag hello-world-docker ${IMAGE_NAME}:${env.VERSION}"
+                bat "docker tag ${IMAGE_NAME} thrishika/${IMAGE_NAME}:${VERSION_TAG}"
             }
         }
 
@@ -34,23 +34,21 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     bat "docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%"
-                    bat "docker push ${IMAGE_NAME}:${env.VERSION}"
+                    bat "docker push thrishika/${IMAGE_NAME}:${VERSION_TAG}"
                 }
             }
         }
 
         stage('Remove Old Container') {
             steps {
-                bat """
-                    docker stop running-container || echo No container to stop
-                    docker rm running-container || echo No container to remove
-                """
+                bat 'docker stop running-container || echo No container to stop'
+                bat 'docker rm running-container || echo No container to remove'
             }
         }
 
         stage('Run Specific Version of Image') {
             steps {
-                bat "docker run -d -p 8000:8000 --name running-container ${IMAGE_NAME}:${env.VERSION}"
+                bat "docker run -d --name running-container -p 8000:8000 thrishika/${IMAGE_NAME}:${VERSION_TAG}"
             }
         }
     }
