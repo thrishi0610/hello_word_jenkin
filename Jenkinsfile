@@ -2,51 +2,47 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'hello-world-docker'
-        DOCKER_USER = 'thrishika'
-        VERSION_TAG = "v${env.BUILD_NUMBER}"
+        VERSION = "v1"  // Starting with version v1
     }
 
     stages {
         stage('Clone GitHub Repo') {
             steps {
-                git url: 'https://github.com/thrishi0610/hello_word_jenkin.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/thrishi0610/hello_word_jenkin.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t ${DOCKER_IMAGE} ."
+                bat "docker build -t hello-world-docker ."
             }
         }
 
         stage('Tag Image with Version') {
             steps {
-                bat "docker tag ${DOCKER_IMAGE} ${DOCKER_USER}/${DOCKER_IMAGE}:${VERSION_TAG}"
-                echo "Tagged image with version: ${VERSION_TAG}"
+                bat "docker tag hello-world-docker thrishika/hello-world-docker:${VERSION}"
+                echo "Tagged image with version: ${VERSION}"
             }
         }
 
         stage('Push Versioned Docker Image') {
             steps {
-                withCredentials([string(credentialsId: 'docker-pass', variable: 'DOCKER_PASS')]) {
-                    bat "echo %DOCKER_PASS% | docker login -u ${DOCKER_USER} --password-stdin"
-                    bat "docker push ${DOCKER_USER}/${DOCKER_IMAGE}:${VERSION_TAG}"
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    bat "docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%"
+                    bat "docker push thrishika/hello-world-docker:${VERSION}"
                 }
             }
         }
 
         stage('Remove Old Container') {
             steps {
-                bat 'docker stop hello-container || exit 0'
-                bat 'docker rm hello-container || exit 0'
+                bat 'docker rm -f hello-container || echo "No old container to remove"'
             }
         }
 
         stage('Run Specific Version of Image') {
             steps {
-                bat "docker pull ${DOCKER_USER}/${DOCKER_IMAGE}:${VERSION_TAG}"
-                bat "docker run -d -p 8000:8000 --name hello-container ${DOCKER_USER}/${DOCKER_IMAGE}:${VERSION_TAG}"
+                bat "docker run -d --name hello-container thrishika/hello-world-docker:${VERSION}"
             }
         }
     }
